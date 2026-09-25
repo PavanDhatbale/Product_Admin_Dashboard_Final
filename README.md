@@ -1,116 +1,254 @@
-# Product Admin Dashboard — Nexgenesis Technologies Frontend Assignment
+# Product Admin Dashboard
 
-A modern, production-grade Product Admin Dashboard built with **Next.js (App Router)**, **React**, **Tailwind CSS**, and **Axios**, powered by the [DummyJSON API](https://dummyjson.com).
+A modern, responsive Product Admin Dashboard developed for the **Nexgenesis Technologies Frontend Assignment** using Next.js, React, Tailwind CSS, Axios, and the DummyJSON API.
 
----
+## 🔗 Links
 
-## Technical Implementations
-
-### 1. Category Filtering Implementation
-* Categories are dynamically fetched from `GET https://dummyjson.com/products/categories` upon component mount using `productService.getCategories()`.
-* Category lists are normalized to handle both string array and object array data structures (`{ slug, name }`).
-* Selecting a category updates the URL query string (`?category=beauty`) and immediately resets pagination to `page=1`.
-* Selecting "All Categories" cleanly deletes the `category` query parameter from the URL.
-
-### 2. Sorting Implementation
-* Supports 6 sorting permutations across 3 fields:
-  * **Price**: Low to High (`sortBy=price&order=asc`), High to Low (`sortBy=price&order=desc`)
-  * **Rating**: Low to High (`sortBy=rating&order=asc`), High to Low (`sortBy=rating&order=desc`)
-  * **Title**: A to Z (`sortBy=title&order=asc`), Z to A (`sortBy=title&order=desc`)
-* Selecting "Default Sorting" deletes both `sortBy` and `order` parameters from the URL.
-* Sorting works across all modes: normal catalog, category filtered results, and global search results.
-
-### 3. URL State Management
-* The browser URL is the **authoritative single source of truth** for all dashboard view states:
-  * `page`, `limit`, `search`, `category`, `sortBy`, `order`
-* Built via the custom hook `useUrlParams()`, which performs defensive sanitization:
-  * Malformed values such as `?page=abc`, `?sortBy=unknown`, or `?order=invalid` automatically fall back to safe defaults without crashing.
-  * Preserves unrelated query parameters when any filter, sorting, or pagination parameter is changed.
-  * Uses `router.replace(url, { scroll: false })` to avoid layout jumping.
-
-### 4. DummyJSON Search + Category Limitation & Resolution
-* **The Limitation**: DummyJSON provides independent endpoints for search (`/products/search?q={query}`) and category filtering (`/products/category/{category}`), but **does not support combining search and category filtering on the server** (e.g., `/products/category/smartphones?q=iphone` does not exist).
-* **Application Behavior**:
-  1. If `search` is present, the app calls `GET /products/search?q={search}` and conducts a global search.
-  2. If both `search` and `category` are present in the URL, global search executes and an explicit, informative notice banner is displayed:
-     > *"DummyJSON API Scope Notice: DummyJSON does not support simultaneous search and category filtering on the server. Showing global search results for '...'. The category filter will automatically apply when search is cleared."*
-  3. When `search` is cleared, the active `category` filter automatically re-applies without requiring the user to re-select it.
-  4. Both search and category results seamlessly support DummyJSON's server-side `sortBy` and `order` sorting parameters.
-
-### 5. Product Details Implementation (Phase 7)
-* **Dynamic Route**: Implemented at `/products/[id]` via Next.js App Router dynamic segments.
-* **API Service**: Uses `productService.getProductById(id)` with pre-validation to guard against malformed ID requests (e.g., `/products/abc` or `/products/null`).
-* **Image Gallery**: Interactive gallery component (`ProductImageGallery`) featuring a main viewport and selectable image thumbnails. Handles single-image products and fallback graphics gracefully.
-* **Metadata & Reviews**: Showcases category, brand, SKU, tags, warranty, shipping information, return policy, and user reviews (`ProductReviews`) with star ratings and reviewer details.
-* **Back Navigation & List State Preservation**: Preserves the user's originating catalog search, filter, and pagination parameters via a `from` query parameter (e.g. `/products/1?from=/products%3Fpage%3D2%26search%3Dphone`), with fallbacks to `router.back()` or `/products`.
-* **Not-Found & Error Handling**: Invalid IDs or 404 responses render a dedicated "Product Not Found" screen with a direct link back to the catalog, while network failures offer a retry mechanism.
-
-### 6. CRUD Operations & Session Overlay Architecture (Phase 8)
-
-#### 1. Add Product Flow
-* **Dedicated Route**: Implemented at `/products/new` with header breadcrumbs and preserve-back link.
-* **Service Method**: `productService.createProduct(formData)` sends a simulated `POST /products/add` request to DummyJSON.
-* **Session Persistence**: Newly created products receive a stable, collision-free numeric identifier (`1001, 1002, ...`) and are prepended to the session collection.
-* **Instant Visibility**: Newly added products appear immediately at the top of Page 1 in the catalog and participate in client-side search, category filtering, and sorting.
-
-#### 2. Edit Product Flow
-* **Dedicated Route**: Accessible at `/products/[id]/edit` from both the Product Table/Cards and the Product Details page.
-* **Pre-population**: Form dynamically loads and prefills current product values (merging remote data with any prior session updates).
-* **Service Method**: `productService.updateProduct(id, formData)` sends `PUT /products/{id}` for remote products or handles session products locally.
-* **Immediate Reflection**: Edits immediately reflect across the entire application (table, cards, and details page) for the current session.
-
-#### 3. Delete Product Flow & Confirmation Dialog
-* **Accessible Dialog**: Destructive actions require explicit confirmation via `DeleteProductDialog`.
-* **Safety & Accessibility**:
-  * Keyboard navigation with `Escape` key dismissal.
-  * Explicit product title displayed in confirmation prompt.
-  * Disables cancel and delete buttons with a loading spinner while deletion is in flight.
-* **Service Method**: `productService.deleteProduct(id)` executes `DELETE /products/{id}`.
-* **Eviction**: The deleted ID is stored in the session deleted registry (`admin_session_deleted_ids`) and purged from all views and totals immediately.
-
-#### 4. Form Validation & UX
-* **Client-Side Validation**: Implemented via custom validation in `ProductForm.jsx`:
-  * **Title**: Required, trimmed non-empty.
-  * **Description**: Required, trimmed non-empty.
-  * **Category**: Required, must select a valid category from dynamic category list.
-  * **Price**: Required, numeric, strictly greater than 0 (`> 0`).
-  * **Stock**: Required, whole non-negative integer (`>= 0`).
-  * **Rating**: Optional, clamped between `0` and `5`.
-* **Field-Specific Errors**: Clear, accessible inline error messages displayed directly beneath invalidated inputs.
-* **Input Preservation**: Preserves user input when submission is blocked due to validation errors.
-
-#### 5. Duplicate-Submit Protection
-* Forms and dialogs maintain an `isSubmitting` flag.
-* Once submitted, Save/Delete buttons are disabled, display loading spinners (`Saving...` / `Deleting...`), and block any subsequent clicks until the request completes.
-
-#### 6. DummyJSON Mutation Limitation & Client-Side Session CRUD Overlay
-* **The Limitation**: DummyJSON is a read-only mock API. `POST /products/add`, `PUT /products/{id}`, and `DELETE /products/{id}` return simulated success responses, but DummyJSON **never alters its database**. Subsequent GET requests return original, unchanged mock data.
-* **The Architectural Solution**:
-  * Built a **Client-Side Session CRUD Overlay** via `ProductContext` backed by `sessionStorage`.
-  * Tracks `addedProducts`, `updatedProducts`, and `deletedIds`.
-  * **Merging Formula**:
-    $$\text{Visible Products} = (\text{Remote Products} + \text{Matching Session Added Products} \text{ with local updates applied}) - \text{Deleted IDs}$$
-  * **Session Persistence**: Page reloads, browser navigation, and route switches within the browser session consistently retain all additions, modifications, and deletions.
-  * **Stable ID Generation**: Avoids DummyJSON's static mock `id: 195` return value by assigning stable sequential IDs (`1001+`) that never collide with DummyJSON's 194 native products.
-
-### 7. Known API Limitations
-* **Non-Persistent Backend**: DummyJSON simulates mutations without backend database updates (resolved in-app via the Session CRUD Overlay).
-* **Mutual Exclusivity of Server-Side Search and Category**: Explained in Section 4 and handled with informative banner feedback.
+* **Live Demo:** `ADD_YOUR_VERCEL_URL_HERE`
+* **GitHub Repository:** `ADD_YOUR_GITHUB_URL_HERE`
 
 ---
 
-## Getting Started
+## 🛠️ Tech Stack
+
+* **Next.js** — App Router
+* **React**
+* **Tailwind CSS**
+* **Axios**
+* **DummyJSON API**
+* **JavaScript**
+* **Lucide React**
+
+---
+
+## ✅ Completed Features
+
+### Authentication
+
+* Login using DummyJSON authentication
+* Protected product routes
+* Logout functionality
+* Invalid credential handling
+* Authentication persistence across refresh
+
+### Product Management
+
+* Product listing with image, title, category, price, rating, and stock
+* Responsive desktop table
+* Responsive mobile product cards
+* Product details page
+* Product image gallery
+* Product reviews
+* Add product
+* Edit product
+* Delete product with confirmation dialog
+* Form validation
+* Duplicate-submit protection
+
+### Search, Filter & Sort
+
+* Debounced product search
+* Category filtering
+* Price sorting
+* Rating sorting
+* Title sorting
+* Search/category limitation handling according to DummyJSON API capabilities
+
+### Pagination
+
+* API-based pagination using `limit` and `skip`
+* Page numbers
+* Previous/Next navigation
+* Page sizes: **10, 20, 50**
+* Range information such as:
+  `Showing 21–40 of 194`
+* Pagination state synchronized with the URL
+
+### URL State Management
+
+The following values are maintained through URL query parameters:
+
+* `page`
+* `limit`
+* `search`
+* `category`
+* `sortBy`
+* `order`
+
+Invalid URL values are safely handled without breaking the application.
+
+### Error & Loading Handling
+
+* Loading states
+* Empty states
+* API error states
+* Retry functionality
+* Invalid product handling
+* Responsive error and empty-state UI
+
+### Responsive Design
+
+The application was tested for:
+
+* Desktop: **1280px**
+* Mobile: **375px**
+
+---
+
+## 🔐 Demo Credentials
+
+```text
+Username: emilys
+Password: emilyspass
+```
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
 
 ```bash
-# Install dependencies
+git clone YOUR_GITHUB_REPOSITORY_URL
+```
+
+### 2. Navigate to the project
+
+```bash
+cd Product_Admin_Dashboard
+```
+
+### 3. Install dependencies
+
+```bash
 npm install
+```
 
-# Run development server
+### 4. Start the development server
+
+```bash
 npm run dev
+```
 
-# Run linter
+Open:
+
+```text
+http://localhost:3000
+```
+
+### 5. Run lint
+
+```bash
 npm run lint
+```
 
-# Build production bundle
+### 6. Create a production build
+
+```bash
 npm run build
 ```
+
+---
+
+## 💡 Implementation Choices
+
+* Used **Next.js App Router** for routing and application structure.
+* Used a **shared Axios configuration** for centralized API communication and authentication handling.
+* Used URL query parameters as the source of truth for pagination, search, filtering, and sorting.
+* Implemented pagination manually using DummyJSON's `limit` and `skip` parameters instead of using a ready-made pagination library.
+* Implemented debounced search with stale-request protection so older API responses cannot overwrite newer search results.
+* Used responsive table and card layouts to provide an appropriate experience across desktop and mobile devices.
+* Because DummyJSON does not permanently persist CRUD mutations, a **session-based CRUD overlay** was implemented so additions, updates, and deletions remain visible during the browser session.
+
+---
+
+## 🐛 Problem Faced & Solution
+
+### Pagination Total Showing Incorrectly
+
+During development, the product list was displaying correctly, but the pagination footer sometimes showed:
+
+```text
+Showing 0–0 of 0
+```
+
+and page navigation was not displayed correctly.
+
+The issue was traced to a mismatch in how the merged product catalog returned the total count and how the products page read that value.
+
+The data flow was corrected so the pagination component receives the correct total count. Additional safeguards were also added for invalid and out-of-range page values.
+
+The fix was then tested with normal products, categories, search results, different page sizes, invalid URLs, and responsive layouts.
+
+---
+
+## 🤖 AI Assistance
+
+AI tools were used as a development and debugging assistant during this assignment.
+
+AI helped with:
+
+* Initial project structure and component planning
+* API integration guidance
+* Debugging implementation issues
+* Identifying edge cases
+* Reviewing pagination, search, filtering, and sorting behavior
+* Troubleshooting responsive UI issues
+* Debugging pagination and state-management problems
+* Reviewing the project against the assignment requirements
+
+All AI-assisted code and suggestions were reviewed, tested, and modified where necessary. The final implementation was manually verified through browser testing, and the functionality is understood and explainable.
+
+---
+
+## 🧪 Testing
+
+The application was tested through browser-based functional and responsive testing.
+
+Tested areas include:
+
+* Authentication
+* Protected routes
+* Product listing
+* Search and debounce
+* Stale search requests
+* Category filtering
+* Sorting
+* Pagination
+* Page sizes 10, 20, and 50
+* URL state
+* Product details
+* Add/Edit/Delete
+* Form validation
+* Loading, empty, and error states
+* Invalid product IDs
+* Invalid URL parameters
+* Desktop responsive layout
+* Mobile responsive layout
+
+### Validation
+
+```text
+ESLint: Passed
+Production Build: Passed
+Browser Testing: Passed
+Responsive Testing: Passed
+Edge Case Testing: Passed
+Stale Request Testing: Passed
+```
+
+---
+
+## 📌 API Limitations
+
+### Search + Category
+
+DummyJSON does not provide server-side support for combining product search and category filtering.
+
+The application therefore gives search precedence when both values are present and displays an informative notice to the user. When the search is cleared, the selected category is applied again.
+
+### CRUD Persistence
+
+DummyJSON CRUD endpoints simulate successful mutations but do not permanently modify the underlying dataset.
+
+The application uses a session-based CRUD overlay to keep added, edited, and deleted products reflected throughout the current browser session.
