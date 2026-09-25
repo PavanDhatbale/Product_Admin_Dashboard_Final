@@ -109,7 +109,7 @@ Password: emilyspass
 ### 1. Clone the repository
 
 ```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
+git clone https://github.com/PavanDhatbale/Product_Admin_Dashboard_Final
 ```
 
 ### 2. Navigate to the project
