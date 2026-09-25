@@ -4,8 +4,8 @@ A modern, responsive Product Admin Dashboard developed for the **Nexgenesis Tech
 
 ## 🔗 Links
 
-* **Live Demo:** `ADD_YOUR_VERCEL_URL_HERE`
-* **GitHub Repository:** `ADD_YOUR_GITHUB_URL_HERE`
+* **Live Demo:** `product-admin-dashboard-final.vercel.app`
+* **GitHub Repository:** `https://github.com/PavanDhatbale/Product_Admin_Dashboard_Final`
 
 ---
 
