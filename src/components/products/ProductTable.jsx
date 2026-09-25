@@ -43,7 +43,7 @@ export default function ProductTable({ products = [], onDelete }) {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+          <tbody className="divide-y divide-slate-101 text-sm text-slate-701">
             {products.map((product) => {
               const stockStatus = getStockStatus(product.stock);
               const detailUrl = `/products/${product.id}${fromParam}`;
