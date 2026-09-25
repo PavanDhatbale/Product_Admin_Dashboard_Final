@@ -52,7 +52,7 @@ export default function DeleteProductDialog({
         }}
       />
 
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 z-10 overflow-hidden animate-scaleUp">
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 p-7 z-11 overflow-hidden animate-scaleUp">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 w-11 h-11 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
             <AlertTriangle size={22} />
